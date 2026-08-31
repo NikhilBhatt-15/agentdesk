@@ -1,159 +1,170 @@
-# Turborepo starter
+# AgentDesk
 
-This Turborepo starter is maintained by the Turborepo core team.
+AgentDesk is a platform-in-progress for creating and running AI agents.
 
-## Using this example
+The current milestone focuses on backend foundations:
+- Monorepo setup with Turborepo + pnpm
+- PostgreSQL in Docker
+- Prisma ORM and migration flow
+- First API endpoint to create an agent
 
-Run the following command:
+## Vision
 
-```sh
-npx create-turbo@latest
+AgentDesk will allow users to:
+- Create agents with a dedicated prompt, model, and metadata
+- Run agents against tasks and workflows
+- Manage and monitor multiple agent types from one platform
+
+This repository currently implements the first part of that plan: agent creation and persistence.
+
+## Current Status
+
+Implemented now:
+- `POST /api/agents` endpoint in the API app
+- `Agent` Prisma model and initial migration
+- Database client package shared via `@agentdesk/db`
+- Dockerized local PostgreSQL (`postgres:17`)
+
+Planned next:
+- Get agent by id/list APIs
+- Agent execution runtime
+- Frontend workflows for creating and managing agents
+
+## Tech Stack
+
+- Runtime: Node.js (>= 24)
+- Monorepo: Turborepo + pnpm workspaces
+- API: Express + TypeScript
+- Database: PostgreSQL
+- ORM: Prisma (with `@prisma/adapter-pg`)
+- Infra (local): Docker Compose
+
+## Repository Layout
+
+```text
+agentdesk/
+  apps/
+    api/        # Express API (agent routes)
+    web/        # Next.js app (UI work in progress)
+    docs/       # Next.js docs app
+  packages/
+    db/         # Prisma schema, migrations, shared DB client
+    ui/         # Shared UI components
+    eslint-config/
+    typescript-config/
 ```
 
-## What's inside?
+## Quick Start
 
-This Turborepo includes the following packages/apps:
+### 1) Prerequisites
 
-### Apps and Packages
+- Node.js `>=24`
+- pnpm `11+`
+- Docker Desktop (or Docker Engine + Compose)
 
-- `docs`: a [Next.js](https://nextjs.org/) app
-- `web`: another [Next.js](https://nextjs.org/) app
-- `@repo/ui`: a stub React component library shared by both `web` and `docs` applications
-- `@repo/eslint-config`: `eslint` configurations (includes `@next/eslint-plugin-next` and `eslint-config-prettier`)
-- `@repo/typescript-config`: `tsconfig.json`s used throughout the monorepo
+### 2) Install dependencies
 
-Each package/app is 100% [TypeScript](https://www.typescriptlang.org/).
-
-### Utilities
-
-This Turborepo has some additional tools already setup for you:
-
-- [TypeScript](https://www.typescriptlang.org/) for static type checking
-- [ESLint](https://eslint.org/) for code linting
-- [Prettier](https://prettier.io) for code formatting
-
-### Build
-
-To build all apps and packages, run the following command:
-
-With [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation) installed (recommended):
-
-```sh
-cd my-turborepo
-turbo build
+```bash
+pnpm install
 ```
 
-Without global `turbo`, use your package manager:
+### 3) Start PostgreSQL
 
-```sh
-cd my-turborepo
-npx turbo build
-pnpm exec turbo build
-pnpm exec turbo build
+```bash
+docker compose up -d
 ```
 
-You can build a specific package by using a [filter](https://turborepo.dev/docs/crafting-your-repository/running-tasks#using-filters):
+Postgres runs with:
+- Host: `localhost`
+- Port: `5433`
+- Database: `agentdesk`
+- Username: `agentdesk`
+- Password: `agentdesk`
 
-With [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation) installed:
+### 4) Configure environment
 
-```sh
-turbo build --filter=docs
+Create `apps/api/.env`:
+
+```env
+DATABASE_URL="postgresql://agentdesk:agentdesk@localhost:5433/agentdesk"
 ```
 
-Without global `turbo`:
+For Prisma CLI commands in `packages/db`, also create `packages/db/.env` with the same `DATABASE_URL` value.
 
-```sh
-npx turbo build --filter=docs
-pnpm exec turbo build --filter=docs
-pnpm exec turbo build --filter=docs
+### 5) Run Prisma generate + migrations
+
+```bash
+pnpm --filter @agentdesk/db db:generate
+pnpm --filter @agentdesk/db db:migrate
 ```
 
-### Develop
+### 6) Start the API
 
-To develop all apps and packages, run the following command:
-
-With [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation) installed (recommended):
-
-```sh
-cd my-turborepo
-turbo dev
+```bash
+pnpm --filter @agentdesk/api dev
 ```
 
-Without global `turbo`, use your package manager:
+The API starts on `http://localhost:3001`.
 
-```sh
-cd my-turborepo
-npx turbo dev
-pnpm exec turbo dev
-pnpm exec turbo dev
+## API: Create Agent
+
+### Endpoint
+
+`POST /api/agents`
+
+### Request body
+
+```json
+{
+  "name": "Support Assistant",
+  "description": "Answers user account questions",
+  "systemPrompt": "You are a helpful support agent.",
+  "model": "gpt-4.1-mini"
+}
 ```
 
-You can develop a specific package by using a [filter](https://turborepo.dev/docs/crafting-your-repository/running-tasks#using-filters):
+### Success response
 
-With [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation) installed:
+`201 Created`
 
-```sh
-turbo dev --filter=web
+```json
+{
+  "id": "cmf...",
+  "name": "Support Assistant",
+  "description": "Answers user account questions",
+  "systemPrompt": "You are a helpful support agent.",
+  "model": "gpt-4.1-mini",
+  "createdAt": "2026-09-01T00:00:00.000Z",
+  "updatedAt": "2026-09-01T00:00:00.000Z"
+}
 ```
 
-Without global `turbo`:
+### Quick curl test
 
-```sh
-npx turbo dev --filter=web
-pnpm exec turbo dev --filter=web
-pnpm exec turbo dev --filter=web
+```bash
+curl -X POST http://localhost:3001/api/agents \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "Support Assistant",
+    "description": "Answers user account questions",
+    "systemPrompt": "You are a helpful support agent.",
+    "model": "gpt-4.1-mini"
+  }'
 ```
 
-### Remote Caching
+## Workspace Commands
 
-> [!TIP]
-> Vercel Remote Cache is free for all plans. Get started today at [vercel.com](https://vercel.com/signup?utm_source=remote-cache-sdk&utm_campaign=free_remote_cache).
+From repository root:
 
-Turborepo can use a technique known as [Remote Caching](https://turborepo.dev/docs/core-concepts/remote-caching) to share cache artifacts across machines, enabling you to share build caches with your team and CI/CD pipelines.
-
-By default, Turborepo will cache locally. To enable Remote Caching you will need an account with Vercel. If you don't have an account you can [create one](https://vercel.com/signup?utm_source=turborepo-examples), then enter the following commands:
-
-With [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation) installed (recommended):
-
-```sh
-cd my-turborepo
-turbo login
+```bash
+pnpm dev          # run dev tasks across workspace
+pnpm build        # build all packages/apps
+pnpm lint         # lint all packages/apps
+pnpm check-types  # TypeScript checks
 ```
 
-Without global `turbo`, use your package manager:
+## Notes
 
-```sh
-cd my-turborepo
-npx turbo login
-pnpm exec turbo login
-pnpm exec turbo login
-```
-
-This will authenticate the Turborepo CLI with your [Vercel account](https://vercel.com/docs/concepts/personal-accounts/overview).
-
-Next, you can link your Turborepo to your Remote Cache by running the following command from the root of your Turborepo:
-
-With [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation) installed:
-
-```sh
-turbo link
-```
-
-Without global `turbo`:
-
-```sh
-npx turbo link
-pnpm exec turbo link
-pnpm exec turbo link
-```
-
-## Useful Links
-
-Learn more about the power of Turborepo:
-
-- [Tasks](https://turborepo.dev/docs/crafting-your-repository/running-tasks)
-- [Caching](https://turborepo.dev/docs/crafting-your-repository/caching)
-- [Remote Caching](https://turborepo.dev/docs/core-concepts/remote-caching)
-- [Filtering](https://turborepo.dev/docs/crafting-your-repository/running-tasks#using-filters)
-- [Configuration Options](https://turborepo.dev/docs/reference/configuration)
-- [CLI Usage](https://turborepo.dev/docs/reference/command-line-reference)
+- This is an active build; expect rapid iteration.
+- Existing API validation is intentionally minimal and will be hardened in upcoming milestones.
+- See `AGENT.md` for the current agent model contract and design direction.
