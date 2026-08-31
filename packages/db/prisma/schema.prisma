@@ -22,4 +22,27 @@ model Agent {
 
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
+  tools        AgentTool[]
+}
+
+model Tool {
+  id          String   @id @default(cuid())
+  name        String
+  description String
+  type        String
+  config      Json?
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  agents      AgentTool[]
+}
+model AgentTool {
+  agentId String
+  toolId  String
+
+  agent Agent @relation(fields: [agentId], references: [id], onDelete: Cascade)
+  tool  Tool  @relation(fields: [toolId], references: [id], onDelete: Cascade)
+
+  @@id([agentId, toolId])
 }

@@ -1,6 +1,5 @@
 import {AgentRepository} from "./agent.respository"
-import type { CreateAgentInput } from "./agent.types";
-
+import type {CreateAgentInput} from "./agent.schema"
 export class AgentService {
     constructor(private readonly agentRepository: AgentRepository) {}
 
